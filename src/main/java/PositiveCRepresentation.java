@@ -41,22 +41,21 @@ public class PositiveCRepresentation {
         Proposition f = new Proposition("f"); //flying
         Proposition p = new Proposition("p"); //penguin
         Proposition w = new Proposition("w"); //winged animal
-        Proposition k = new Proposition("k"); //kiwis
+        Proposition k = new Proposition("k"); //kiwi
 
-        Proposition a = new Proposition("a"); //awesome kiwis
+        Proposition a = new Proposition("a"); //awesome kiwi
         Proposition c = new Proposition("c"); //crocodile
-        Proposition d = new Proposition("d"); //descends from dinosaurs
+        Proposition d = new Proposition("d"); //descend from dinosaurs
 
         Proposition e = new Proposition("e"); //lays eggs
         Proposition h = new Proposition("h"); //huge animal
-        Proposition s = new Proposition("s"); //super-penguins
+        Proposition s = new Proposition("s"); //super-penguin
 
         kb.add(new Conditional(b,f));
         kb.add(new Conditional(p,b));
 
         kb.add(new Conditional(p,new Negation(f)));
         kb.add(new Conditional(b,w));
-
 
         return kb;
     }

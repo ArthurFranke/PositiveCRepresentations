@@ -3,11 +3,14 @@ import org.tweetyproject.logics.cl.syntax.Conditional;
 import org.tweetyproject.logics.pl.sat.Sat4jSolver;
 import org.tweetyproject.logics.pl.sat.SatSolver;
 import org.tweetyproject.logics.pl.semantics.NicePossibleWorld;
-import org.tweetyproject.logics.pl.syntax.*;
+import org.tweetyproject.logics.pl.syntax.Conjunction;
+import org.tweetyproject.logics.pl.syntax.Negation;
+import org.tweetyproject.logics.pl.syntax.PlFormula;
+import org.tweetyproject.logics.pl.syntax.Proposition;
 
 import java.util.*;
 
-public class PositiveCRepresentation {
+public class ExperimentalSearch {
     private static Set<NicePossibleWorld> worlds;
     private static ArrayList<ClBeliefSet> partitions;
     private static ArrayList<ConditionalKappa> condStruct;
@@ -26,86 +29,70 @@ public class PositiveCRepresentation {
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
 
         if(partitions.isEmpty()){
-            inconsistentErrorMessage();
+            PositiveCRepresentation.inconsistentErrorMessage();
         }
         else{
-            setKappaValues(delta);
-            setKappaWorlds(delta);
-
-            // since there are c-representations which aren't correct, this step has to be made
-            while(!testCorrectness()){
-                setKappaValues(delta);
+            for(int i = 0; i<100000; i++){
+                setKappaValuesRandomly(delta);
                 setKappaWorlds(delta);
+
+                if(testCorrectness()){
+                    System.out.println("\n* * * * * * * * * * * * * * *");
+                    System.out.println("Impact-factors:");
+                    for(ConditionalKappa cK : condStruct){
+                        System.out.println(cK);
+                    }
+                }
             }
 
-            printResults(delta);
+            //PositiveCRepresentation.printResults(delta); //print last result
         }
     }
 
-    /*
-     *  A simple Method for preloading some knowledgebases
-     */
-    private static ArrayList<ClBeliefSet> setKnowledgeBase(){
-        ArrayList<ClBeliefSet> bases = new ArrayList<>();
-        ClBeliefSet kb1 = new ClBeliefSet();
+    private static void setKappaValuesRandomly(ClBeliefSet delta) {
+        condStruct.clear();
+        kappaWorlds.clear();
+        int kappaMinus;
+        int kappaPlus;
 
-        /* Define signature */
-        Proposition b = new Proposition("b"); //bird
-        Proposition f = new Proposition("f"); //flying
-        Proposition p = new Proposition("p"); //penguin
-        Proposition w = new Proposition("w"); //winged animal
-        Proposition k = new Proposition("k"); //kiwi
+        for(Conditional c : delta) {
+            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-10,10);
+            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-10,10);
 
-        Proposition a = new Proposition("a"); //awesome kiwi
-        Proposition c = new Proposition("c"); //crocodile
-        Proposition d = new Proposition("d"); //descend from dinosaurs
+            condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
+        }
+    }
+    private static void setKappaValuesDifference(ClBeliefSet delta) {
+        condStruct.clear();
+        kappaWorlds.clear();
+        int kappaMinus;
+        int kappaPlus;
 
-        Proposition e = new Proposition("e"); //lays eggs
-        Proposition h = new Proposition("h"); //huge animal
-        Proposition s = new Proposition("s"); //super-penguin
+        for(Conditional c : delta) {
+            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-10,10);
+            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-10,10);
 
-        /* Add Conditionals */
-        kb1.add(new Conditional(b,f));
-        kb1.add(new Conditional(p,b));
-        kb1.add(new Conditional(p,new Negation(f)));
-        kb1.add(new Conditional(b,w));
-
-        /* super-penguins can fly */
-        ClBeliefSet kb2 = new ClBeliefSet(kb1);
-        kb2.add(new Conditional(s,p));
-        kb2.add(new Conditional(s,f));
-
-        /* knowledge about animals which lay eggs and new knowledge about crocodiles*/
-        ClBeliefSet kb3 = new ClBeliefSet(kb2);
-        kb3.add(new Conditional(e,p));
-        kb3.add(new Conditional(e,d));
-        kb3.add(new Conditional(h,c));
-        kb3.add(new Conditional(c,d));
-
-        //kb3.add(new Conditional(b,p)); // makes the knowledgebases inconsistent, for check purposes
-
-        bases.add(kb1); // has two partitions and four conditionals
-        bases.add(kb2); // has three partitions and six conditionals
-        bases.add(kb3); // has three partitions and ten conditionals
-        return bases;
+            while((kappaMinus - kappaPlus) != 2){
+                kappaMinus = PositiveCRepresentation.getRandomNumberInRange(1,10);
+                kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(1,10);
+            }
+            condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
+        }
     }
 
-    private static void setKappaValues(ClBeliefSet kb) {
+    private static void setKappaValuesPartition(ClBeliefSet kb) {
         condStruct.clear();
         kappaWorlds.clear();
 
-        int signature_length = kb.getSignature().size();
         int kappaMinus;
         int kappaPlus = 1;
 
-
         for(ClBeliefSet bs : partitions){
             boolean first_conditional = true;
-
             int i = partitions.indexOf(bs);
 
             for(Conditional cond: bs){
-                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+1);
+                kappaMinus = PositiveCRepresentation.getRandomNumberInRange(kappaPlus+1,10);
 
                 if(first_conditional){
                     kappaMinus = (int) Math.pow(2, i+1);
@@ -117,7 +104,7 @@ public class PositiveCRepresentation {
         }
     }
 
-    private static void setKappaWorlds(ClBeliefSet kb) {
+    public static void setKappaWorlds(ClBeliefSet kb) {
         int kappa;
         for(NicePossibleWorld w: worlds) {
             // initial value of kappa_zero is 0, can be changed if necessary
@@ -143,7 +130,6 @@ public class PositiveCRepresentation {
         }
     }
 
-    /* check */
     private static boolean testCorrectness(){
         boolean result = true;
         int negativeNumbers = 0;
@@ -192,7 +178,7 @@ public class PositiveCRepresentation {
         return result;
     }
 
-    private static int getKappaSum(Conditional c, NicePossibleWorld w, Boolean flag) {
+    public static int getKappaSum(Conditional c, NicePossibleWorld w, Boolean flag) {
         ArrayList<Integer> kappaList = new ArrayList<>();
         ArrayList<ConditionalKappa> varCondStruct = new ArrayList<>(condStruct);
 
@@ -218,35 +204,48 @@ public class PositiveCRepresentation {
         return sum;
     }
 
-    public static int getRandomNumberInRange(int min, int max) {
-        Random r = new Random();
-        OptionalInt value = r.ints(min, (max + 1)).limit(1).findFirst();
-        return value.isPresent() ? value.getAsInt() : 0;
-    }
+    private static ArrayList<ClBeliefSet> setKnowledgeBase(){
+        ArrayList<ClBeliefSet> bases = new ArrayList<>();
+        ClBeliefSet kb1 = new ClBeliefSet();
 
-    public static void printResults(ClBeliefSet delta) {
-        // Printing all details
-        System.out.println("Knowledgebase:\n" + "Delta = " + delta + "\n");
+        /* Define signature */
+        Proposition b = new Proposition("b"); //bird
+        Proposition f = new Proposition("f"); //flying
+        Proposition p = new Proposition("p"); //penguin
+        Proposition w = new Proposition("w"); //winged animal
+        Proposition k = new Proposition("k"); //kiwi
 
-        System.out.println("Partitioning:");
-        int l = 0;
-        for(ClBeliefSet bs : partitions){
-            System.out.println("Delta_" + l + " = " + bs);
-            l++;
-        }
-        System.out.println("\nImpact-factors:");
-        for(ConditionalKappa cK : condStruct){
-            System.out.println(cK);
-        }
-        System.out.println("\nSuitable c-representation of Delta:");
-        kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));
-    }
+        Proposition a = new Proposition("a"); //awesome kiwi
+        Proposition c = new Proposition("c"); //crocodile
+        Proposition d = new Proposition("d"); //descend from dinosaurs
 
-    public static void inconsistentErrorMessage() {
-        System.out.println("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
-        System.out.println("* \t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t  *");
-        System.out.println("* \t The given knowledgebase is inconsistent. Please check your input. \t  *");
-        System.out.println("* \t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t  *");
-        System.out.println("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+        Proposition e = new Proposition("e"); //lays eggs
+        Proposition h = new Proposition("h"); //huge animal
+        Proposition s = new Proposition("s"); //super-penguin
+
+        /* Add Conditionals */
+        kb1.add(new Conditional(b,f));
+        kb1.add(new Conditional(p,b));
+        kb1.add(new Conditional(p,new Negation(f)));
+        kb1.add(new Conditional(b,w));
+
+        /* super-penguins can fly */
+        ClBeliefSet kb2 = new ClBeliefSet(kb1);
+        kb2.add(new Conditional(s,p));
+        kb2.add(new Conditional(s,f));
+
+        /* knowledge about animals which lay eggs and new knowledge about crocodiles*/
+        ClBeliefSet kb3 = new ClBeliefSet(kb2);
+        kb3.add(new Conditional(e,p));
+        kb3.add(new Conditional(e,d));
+        kb3.add(new Conditional(h,c));
+        kb3.add(new Conditional(c,d));
+
+        //kb3.add(new Conditional(b,p)); // makes the knowledgebases inconsistent, for check purposes
+
+        bases.add(kb1); // has two partitions and four conditionals
+        bases.add(kb2); // has three partitions and six conditionals
+        bases.add(kb3); // has three partitions and ten conditionals
+        return bases;
     }
 }

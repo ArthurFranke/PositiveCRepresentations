@@ -21,7 +21,7 @@ public class PositiveCRepresentation {
 
         /* Define knowledgebase */
         ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 3
+        ClBeliefSet delta = knowledgeBases.get(3); //pick between 0 and 3
 
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
@@ -66,7 +66,6 @@ public class PositiveCRepresentation {
         Proposition h = new Proposition("h"); //huge animal
         Proposition s = new Proposition("s"); //super-penguin
 
-
         Proposition v = new Proposition("v");
         Proposition z = new Proposition("z");
 
@@ -101,6 +100,7 @@ public class PositiveCRepresentation {
         bases.add(kb2); // has three partitions and six conditionals
         bases.add(kb3); // has three partitions and ten conditionals
         bases.add(kb4); // has two partitions and five conditionals
+
         return bases;
     }
 

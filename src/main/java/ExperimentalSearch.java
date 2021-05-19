@@ -32,7 +32,7 @@ public class ExperimentalSearch {
 
         /* Define knowledgebase */
         ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 2
+        ClBeliefSet delta = knowledgeBases.get(3); //pick between 0 and 3
 
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
@@ -42,7 +42,7 @@ public class ExperimentalSearch {
         }
         else{
             for(int i = 0; i<1000000; i++){
-                setKappaValuesRandomly(delta);
+                setKappaValuesPartition(delta);
                 setKappaWorlds(delta);
 
                 if(testCorrectness()){
@@ -65,7 +65,7 @@ public class ExperimentalSearch {
 
         for(Conditional c : delta) {
             kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-9,9);
-            kappaPlus  = -1; //PositiveCRepresentation.getRandomNumberInRange(-9,9);
+            kappaPlus  = 1; //PositiveCRepresentation.getRandomNumberInRange(-9,9);
 
             condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
         }
@@ -183,7 +183,6 @@ public class ExperimentalSearch {
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
                 }
-
             }
         }
         return result;
@@ -234,6 +233,9 @@ public class ExperimentalSearch {
         Proposition h = new Proposition("h"); //huge animal
         Proposition s = new Proposition("s"); //super-penguin
 
+        Proposition v = new Proposition("v");
+        Proposition z = new Proposition("z");
+
         /* Add Conditionals */
         kb1.add(new Conditional(b,f));
         kb1.add(new Conditional(p,b));
@@ -254,9 +256,17 @@ public class ExperimentalSearch {
 
         //kb3.add(new Conditional(b,p)); // makes the knowledgebases inconsistent, for check purposes
 
+        ClBeliefSet kb4 = new ClBeliefSet();
+        kb4.add(new Conditional(e,v));
+        kb4.add(new Conditional(v,new Negation(s)));
+        kb4.add(new Conditional(e,s));
+        kb4.add(new Conditional(v,f));
+        kb4.add(new Conditional(e,new Negation(z)));
+
         bases.add(kb1); // has two partitions and four conditionals
         bases.add(kb2); // has three partitions and six conditionals
         bases.add(kb3); // has three partitions and ten conditionals
+        bases.add(kb4);
         return bases;
     }
 }

@@ -12,6 +12,7 @@ public class PositiveCRepresentation {
     private static ArrayList<ClBeliefSet> partitions;
     private static ArrayList<ConditionalKappa> condStruct;
     private static Map<NicePossibleWorld, Integer> kappaWorlds;
+    private static int kappa_0;
 
     public static void main(String[] args) {
         SatSolver.setDefaultSolver(new Sat4jSolver());
@@ -33,9 +34,10 @@ public class PositiveCRepresentation {
             setKappaWorlds(delta);
 
             // since there are c-representations which aren't correct, this step has to be made
-            while(!testCorrectness()){
+            while(testCorrectness()){
                 setKappaValues(delta);
                 setKappaWorlds(delta);
+                testCorrectness();
             }
 
             printResults(delta);
@@ -98,7 +100,7 @@ public class PositiveCRepresentation {
         bases.add(kb1); // has two partitions and four conditionals
         bases.add(kb2); // has three partitions and six conditionals
         bases.add(kb3); // has three partitions and ten conditionals
-        bases.add(kb4); // has three partitions and ten conditionals
+        bases.add(kb4); // has two partitions and five conditionals
         return bases;
     }
 
@@ -110,20 +112,17 @@ public class PositiveCRepresentation {
         int kappaMinus;
         int kappaPlus = 1;
 
-
         for(ClBeliefSet bs : partitions){
             boolean first_conditional = true;
-
             int i = partitions.indexOf(bs);
 
             for(Conditional cond: bs){
-                kappaMinus = getRandomNumberInRange(kappaPlus,signature_length+1);
+                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+2);
 
                 if(first_conditional){
-                    kappaMinus = (int) Math.pow(2, i+1);
+                    kappaMinus = (int) Math.pow(2,i+1);
                     first_conditional = false;
                 }
-
                 condStruct.add(new ConditionalKappa(cond,kappaMinus, kappaPlus));
             }
         }
@@ -133,7 +132,7 @@ public class PositiveCRepresentation {
         int kappa;
         for(NicePossibleWorld w: worlds) {
             // initial value of kappa_zero is 0, can be changed if necessary
-            kappa = 0;
+            kappa = kappa_0;
             for(Conditional c: kb){
                 PlFormula con = c.getConclusion();
                 Conjunction pre = Semantics.CollectionToConjunction(c.getPremise());
@@ -151,7 +150,6 @@ public class PositiveCRepresentation {
                     kappa = kappa + condStruct.get(index).getKappaNeg();
                 }
             }
-            System.out.println("kappa("+w);
             kappaWorlds.put(w,kappa);
         }
     }
@@ -159,15 +157,19 @@ public class PositiveCRepresentation {
     /* check */
     private static boolean testCorrectness(){
         boolean result = true;
-        int negativeNumbers = 0;
+        ArrayList<Integer> negativeNumbers = new ArrayList<>();
+
         for(int k : kappaWorlds.values()){
             if(k<0){
-                negativeNumbers++;}
+                negativeNumbers.add(k);}
         }
-        if(negativeNumbers > 0){
-            result = false;
+        // for negative kappa values adjust kappa_0 accordingly
+        if(!negativeNumbers.isEmpty()){
+            kappa_0 = Math.abs(Collections.min(negativeNumbers));
+            kappaWorlds.replaceAll((w, v) -> v + kappa_0);
         }
-        if(result && kappaWorlds.containsValue(0)){
+
+        if(kappaWorlds.containsValue(0)){
             Iterator<ConditionalKappa> it = condStruct.iterator();
             int kappaW;
             int kappaPosSum;
@@ -199,12 +201,10 @@ public class PositiveCRepresentation {
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
                 }
-                else{
-                    System.out.println("cK:"+ k + ":"+ possibleMinimaW + "-" + possibleMinimaF);
-                }
             }
         }
         return result;
+
     }
 
     private static int getKappaSum(Conditional c, NicePossibleWorld w, Boolean flag) {
@@ -252,6 +252,9 @@ public class PositiveCRepresentation {
         System.out.println("\nImpact-factors:");
         for(ConditionalKappa cK : condStruct){
             System.out.println(cK);
+        }
+        if(kappa_0 != 0) {
+            System.out.println("\nKappa_0 had to be adjusted to: " + kappa_0);
         }
         System.out.println("\nSuitable c-representation of Delta:");
         kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));

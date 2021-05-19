@@ -20,7 +20,7 @@ public class PositiveCRepresentation {
 
         /* Define knowledgebase */
         ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 2
+        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 3
 
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
@@ -64,6 +64,10 @@ public class PositiveCRepresentation {
         Proposition h = new Proposition("h"); //huge animal
         Proposition s = new Proposition("s"); //super-penguin
 
+
+        Proposition v = new Proposition("v");
+        Proposition z = new Proposition("z");
+
         /* Add Conditionals */
         kb1.add(new Conditional(b,f));
         kb1.add(new Conditional(p,b));
@@ -84,9 +88,17 @@ public class PositiveCRepresentation {
 
         //kb3.add(new Conditional(b,p)); // makes the knowledgebases inconsistent, for check purposes
 
+        ClBeliefSet kb4 = new ClBeliefSet();
+        kb4.add(new Conditional(e,v));
+        kb4.add(new Conditional(v,new Negation(s)));
+        kb4.add(new Conditional(e,s));
+        kb4.add(new Conditional(v,f));
+        kb4.add(new Conditional(e,new Negation(z)));
+
         bases.add(kb1); // has two partitions and four conditionals
         bases.add(kb2); // has three partitions and six conditionals
         bases.add(kb3); // has three partitions and ten conditionals
+        bases.add(kb4); // has three partitions and ten conditionals
         return bases;
     }
 
@@ -105,7 +117,7 @@ public class PositiveCRepresentation {
             int i = partitions.indexOf(bs);
 
             for(Conditional cond: bs){
-                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+1);
+                kappaMinus = getRandomNumberInRange(kappaPlus,signature_length+1);
 
                 if(first_conditional){
                     kappaMinus = (int) Math.pow(2, i+1);
@@ -139,6 +151,7 @@ public class PositiveCRepresentation {
                     kappa = kappa + condStruct.get(index).getKappaNeg();
                 }
             }
+            System.out.println("kappa("+w);
             kappaWorlds.put(w,kappa);
         }
     }
@@ -186,7 +199,9 @@ public class PositiveCRepresentation {
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
                 }
-
+                else{
+                    System.out.println("cK:"+ k + ":"+ possibleMinimaW + "-" + possibleMinimaF);
+                }
             }
         }
         return result;
@@ -214,7 +229,7 @@ public class PositiveCRepresentation {
             }
         }
         int sum = 0;
-        for(Integer i : kappaList) sum=+i;
+        for(Integer i : kappaList) sum+=i;
         return sum;
     }
 

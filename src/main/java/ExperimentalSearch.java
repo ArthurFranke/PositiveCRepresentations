@@ -8,6 +8,9 @@ import org.tweetyproject.logics.pl.syntax.Negation;
 import org.tweetyproject.logics.pl.syntax.PlFormula;
 import org.tweetyproject.logics.pl.syntax.Proposition;
 
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
 import java.util.*;
 
 public class ExperimentalSearch {
@@ -17,6 +20,12 @@ public class ExperimentalSearch {
     private static Map<NicePossibleWorld, Integer> kappaWorlds;
 
     public static void main(String[] args) {
+
+        // If the Ouput should be printed in a seperate file instead of the terminal
+        // throws FileNotFoundException
+        // PrintStream out = new PrintStream(new FileOutputStream("output1.txt"));
+        // System.setOut(out);
+
         SatSolver.setDefaultSolver(new Sat4jSolver());
         condStruct = new ArrayList<>();
         kappaWorlds = new HashMap<>();
@@ -32,7 +41,7 @@ public class ExperimentalSearch {
             PositiveCRepresentation.inconsistentErrorMessage();
         }
         else{
-            for(int i = 0; i<100000; i++){
+            for(int i = 0; i<1000000; i++){
                 setKappaValuesRandomly(delta);
                 setKappaWorlds(delta);
 
@@ -42,10 +51,9 @@ public class ExperimentalSearch {
                     for(ConditionalKappa cK : condStruct){
                         System.out.println(cK);
                     }
+                    kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));
                 }
             }
-
-            //PositiveCRepresentation.printResults(delta); //print last result
         }
     }
 
@@ -56,8 +64,8 @@ public class ExperimentalSearch {
         int kappaPlus;
 
         for(Conditional c : delta) {
-            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-10,10);
-            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-10,10);
+            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-9,9);
+            kappaPlus  = -1; //PositiveCRepresentation.getRandomNumberInRange(-9,9);
 
             condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
         }
@@ -137,10 +145,13 @@ public class ExperimentalSearch {
             if(k<0){
                 negativeNumbers++;}
         }
+        /*
         if(negativeNumbers > 0){
             result = false;
         }
-        if(result && kappaWorlds.containsValue(0)){
+        if(result &&
+        */
+        if(kappaWorlds.containsValue(0)){
             Iterator<ConditionalKappa> it = condStruct.iterator();
             int kappaW;
             int kappaPosSum;
@@ -200,7 +211,7 @@ public class ExperimentalSearch {
             }
         }
         int sum = 0;
-        for(Integer i : kappaList) sum=+i;
+        for(Integer i : kappaList) sum+=i;
         return sum;
     }
 

@@ -21,7 +21,7 @@ public class PositiveCRepresentation {
 
         /* Define knowledgebase */
         ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(3); //pick between 0 and 3
+        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 3
 
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
@@ -33,11 +33,25 @@ public class PositiveCRepresentation {
             setKappaValues(delta);
             setKappaWorlds(delta);
 
+            // fallback
+            int fallback = 1;
             // since there are c-representations which aren't correct, this step has to be made
-            while(testCorrectness()){
+            while(!testCorrectness()){
                 setKappaValues(delta);
                 setKappaWorlds(delta);
                 testCorrectness();
+
+                fallback++;
+                if(fallback > 100000 && !testCorrectness()){
+                    setKappaValues(delta,true);
+                    setKappaWorlds(delta);
+                    testCorrectness();
+                    if(testCorrectness()){
+                        System.out.println("Fallback method used:");
+                    }
+                }
+
+
             }
 
             printResults(delta);
@@ -81,7 +95,7 @@ public class PositiveCRepresentation {
         kb2.add(new Conditional(s,f));
 
         /* knowledge about animals which lay eggs and new knowledge about crocodiles*/
-        ClBeliefSet kb3 = new ClBeliefSet(kb2);
+        ClBeliefSet kb3 = new ClBeliefSet(kb1);
         kb3.add(new Conditional(e,p));
         kb3.add(new Conditional(e,d));
         kb3.add(new Conditional(h,c));
@@ -96,11 +110,21 @@ public class PositiveCRepresentation {
         kb4.add(new Conditional(v,f));
         kb4.add(new Conditional(e,new Negation(z)));
 
+        ClBeliefSet kb5 = new ClBeliefSet();
+        kb5.add(new Conditional(new Tautology(),b));
+        kb5.add(new Conditional(b,f));
+        kb5.add(new Conditional(b,w));
+        kb5.add(new Conditional(p,b));
+        kb5.add(new Conditional(p,new Negation(f)));
+        kb5.add(new Conditional(s,a));
+        kb5.add(new Conditional(b,e));
+        kb5.add(new Conditional(a,e));
+
         bases.add(kb1); // has two partitions and four conditionals
         bases.add(kb2); // has three partitions and six conditionals
         bases.add(kb3); // has three partitions and ten conditionals
         bases.add(kb4); // has two partitions and five conditionals
-
+        bases.add(kb5);
         return bases;
     }
 
@@ -113,7 +137,34 @@ public class PositiveCRepresentation {
         int kappaPlus = 1;
 
         for(ClBeliefSet bs : partitions){
+            int i = partitions.indexOf(bs);
             boolean first_conditional = true;
+            for(Conditional cond: bs){
+                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+2);
+
+                if(first_conditional){
+                    kappaMinus = (int) Math.pow(2,i+1);
+                    first_conditional = false;
+                }
+                condStruct.add(new ConditionalKappa(cond,kappaMinus, kappaPlus));
+            }
+        }
+    }
+
+    /*
+     *  If the first method isnt fast enough, use this fallback method to compute
+     *  the kappa values
+     */
+    private static void setKappaValues(ClBeliefSet kb, boolean fallback) {
+        condStruct.clear();
+        kappaWorlds.clear();
+
+        int signature_length = kb.getSignature().size();
+        int kappaMinus;
+        int kappaPlus = 1;
+
+        boolean first_conditional = true;
+        for(ClBeliefSet bs : partitions){
             int i = partitions.indexOf(bs);
 
             for(Conditional cond: bs){
@@ -132,6 +183,7 @@ public class PositiveCRepresentation {
         int kappa;
         for(NicePossibleWorld w: worlds) {
             // initial value of kappa_zero is 0, can be changed if necessary
+            // but shouldn't happen since the following methods adjust it
             kappa = kappa_0;
             for(Conditional c: kb){
                 PlFormula con = c.getConclusion();
@@ -200,11 +252,11 @@ public class PositiveCRepresentation {
                 int rightSum = Collections.min(possibleMinimaW) - Collections.min(possibleMinimaF);
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
+                    kappa_0 = 0;
                 }
             }
         }
         return result;
-
     }
 
     private static int getKappaSum(Conditional c, NicePossibleWorld w, Boolean flag) {

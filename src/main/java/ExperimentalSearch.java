@@ -18,6 +18,7 @@ public class ExperimentalSearch {
     private static ArrayList<ClBeliefSet> partitions;
     private static ArrayList<ConditionalKappa> condStruct;
     private static Map<NicePossibleWorld, Integer> kappaWorlds;
+    private static int kappa_0;
 
     public static void main(String[] args) {
 
@@ -32,7 +33,7 @@ public class ExperimentalSearch {
 
         /* Define knowledgebase */
         ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(3); //pick between 0 and 3
+        ClBeliefSet delta = knowledgeBases.get(1); //pick between 0 and 3
 
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
@@ -42,10 +43,11 @@ public class ExperimentalSearch {
         }
         else{
             for(int i = 0; i<1000000; i++){
-                setKappaValuesPartition(delta);
+                setKappaValuesRandomly(delta);
                 setKappaWorlds(delta);
 
                 if(testCorrectness()){
+                    System.out.println(partitions);
                     System.out.println("\n* * * * * * * * * * * * * * *");
                     System.out.println("Impact-factors:");
                     for(ConditionalKappa cK : condStruct){
@@ -65,7 +67,7 @@ public class ExperimentalSearch {
 
         for(Conditional c : delta) {
             kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-9,9);
-            kappaPlus  = 1; //PositiveCRepresentation.getRandomNumberInRange(-9,9);
+            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-9,9);
 
             condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
         }
@@ -140,17 +142,18 @@ public class ExperimentalSearch {
 
     private static boolean testCorrectness(){
         boolean result = true;
-        int negativeNumbers = 0;
+        ArrayList<Integer> negativeNumbers = new ArrayList<>();
+
         for(int k : kappaWorlds.values()){
             if(k<0){
-                negativeNumbers++;}
+                negativeNumbers.add(k);}
         }
-        /*
-        if(negativeNumbers > 0){
-            result = false;
+        // for negative kappa values adjust kappa_0 accordingly
+        if(!negativeNumbers.isEmpty()){
+            kappa_0 = Math.abs(Collections.min(negativeNumbers));
+            kappaWorlds.replaceAll((w, v) -> v + kappa_0);
         }
-        if(result &&
-        */
+
         if(kappaWorlds.containsValue(0)){
             Iterator<ConditionalKappa> it = condStruct.iterator();
             int kappaW;
@@ -182,6 +185,7 @@ public class ExperimentalSearch {
                 int rightSum = Collections.min(possibleMinimaW) - Collections.min(possibleMinimaF);
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
+                    kappa_0 = 0;
                 }
             }
         }

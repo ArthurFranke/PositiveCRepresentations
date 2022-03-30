@@ -9,20 +9,22 @@ import org.tweetyproject.logics.pl.syntax.PlFormula;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashSet;
 import java.util.Set;
 
 public class Semantics {
-    public static boolean tolerates(Conditional conditional, ClBeliefSet beliefSet){
-        /* Generate formula for SAT-test */
-        Conjunction conjunction = new Conjunction(CollectionToConjunction(conditional.getPremise()), conditional.getConclusion());
 
-        for (Conditional cond:beliefSet) {
-            Implication implication = new Implication (CollectionToConjunction(cond.getPremise()), cond.getConclusion());
+    public static boolean tolerates(Conditional conditional, ClBeliefSet beliefSet){
+        Collection<PlFormula> premise = conditional.getPremise();
+        PlFormula conclusion = conditional.getConclusion();
+        Conjunction conjunction = new Conjunction(CollectionToConjunction(premise), conclusion);
+
+        for (Conditional c : beliefSet) {
+            Implication implication = new Implication (CollectionToConjunction(c.getPremise()), c.getConclusion());
             conjunction.add(implication);
         }
 
-        return SatSolver.getDefaultSolver().isConsistent((Collection<PlFormula>) conjunction);
+        SatSolver solver = SatSolver.getDefaultSolver();
+        return solver.isConsistent((Collection<PlFormula>) conjunction);
     }
 
     public static ArrayList<ClBeliefSet> getPartitions(ClBeliefSet delta){
@@ -51,7 +53,7 @@ public class Semantics {
         return deltaPartition;
     }
 
-    static ArrayList<NicePossibleWorld> getVerifyingWorlds(Conditional c, Set<NicePossibleWorld> worlds){
+    public static ArrayList<NicePossibleWorld> getVerifyingWorlds(Conditional c, Set<NicePossibleWorld> worlds){
         ArrayList<NicePossibleWorld> vWorlds = new ArrayList<>();
         Conjunction conjunction = new Conjunction(CollectionToConjunction(c.getPremise()), c.getConclusion());
 
@@ -63,7 +65,7 @@ public class Semantics {
         return vWorlds;
     }
 
-    static ArrayList<NicePossibleWorld> getFalsifyingWorlds(Conditional c, Set<NicePossibleWorld> worlds) {
+    public static ArrayList<NicePossibleWorld> getFalsifyingWorlds(Conditional c, Set<NicePossibleWorld> worlds) {
         ArrayList<NicePossibleWorld> fWorlds = new ArrayList<>();
         Negation nB = new Negation(c.getConclusion());
         Conjunction conjunction = new Conjunction(CollectionToConjunction(c.getPremise()), nB);
@@ -83,5 +85,10 @@ public class Semantics {
         Conjunction conjunction = new Conjunction();
         conjunction.addAll(collection);
         return conjunction;
+    }
+
+
+    public static ArrayList<NicePossibleWorld> getOrderedList(Set<NicePossibleWorld> input){
+        return null;
     }
 }

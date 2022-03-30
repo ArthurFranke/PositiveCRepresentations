@@ -1,191 +1,129 @@
+import org.tweetyproject.logics.cl.semantics.ConditionalStructure;
 import org.tweetyproject.logics.cl.syntax.ClBeliefSet;
 import org.tweetyproject.logics.cl.syntax.Conditional;
 import org.tweetyproject.logics.pl.sat.Sat4jSolver;
 import org.tweetyproject.logics.pl.sat.SatSolver;
 import org.tweetyproject.logics.pl.semantics.NicePossibleWorld;
-import org.tweetyproject.logics.pl.syntax.*;
+import org.tweetyproject.logics.pl.syntax.Conjunction;
+import org.tweetyproject.logics.pl.syntax.Negation;
+import org.tweetyproject.logics.pl.syntax.PlFormula;
 
 import java.util.*;
 
-public class PositiveCRepresentation {
+public class PosCRep {
+    private static final Integer MAX_VAL = Integer.MAX_VALUE;
+    private static ArrayList<int[]> impacts = new ArrayList<>();
     private static Set<NicePossibleWorld> worlds;
     private static ArrayList<ClBeliefSet> partitions;
     private static ArrayList<ConditionalKappa> condStruct;
-    private static Map<NicePossibleWorld, Integer> kappaWorlds;
+    private static LinkedHashMap<NicePossibleWorld, Integer> kappaWorlds;
+    private static LinkedHashMap<NicePossibleWorld, String> kappaWorlds2;
+    private static HashSet<int[]> allImpacts;
     private static int kappa_0;
+    private static int cRepType;
 
     public static void main(String[] args) {
         SatSolver.setDefaultSolver(new Sat4jSolver());
         condStruct = new ArrayList<>();
-        kappaWorlds = new HashMap<>();
+        kappaWorlds = new LinkedHashMap<>();
+        kappaWorlds2 = new LinkedHashMap<>();
+        allImpacts = new HashSet<>();
 
-        /* Define knowledgebase */
-        ArrayList<ClBeliefSet> knowledgeBases = setKnowledgeBase();
-        ClBeliefSet delta = knowledgeBases.get(0); //pick between 0 and 3
+        /* set knowledgebase */
+        KnowledgeBases kbHat = new KnowledgeBases();
+        kbHat.setKnowledgeBase();
 
+        /* set knowledgebase for which the cRep are computed */
+        ClBeliefSet delta = kbHat.getPenguin();
+
+        /* set which cRep should be computed */
+        /* 0 = simple, 1 = reward-fix, 2 = fair */
+        cRepType = 2;
+
+        /* generate partitions and worlds */
         partitions = Semantics.getPartitions(delta);
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
 
+        ConditionalStructure cs = new ConditionalStructure(delta);
+
+        /* check for consistency */
         if(partitions.isEmpty()){
             inconsistentErrorMessage();
         }
         else{
+            /* get all negative impact-values */
+            ImpactGenerator iGenerator = new ImpactGenerator(delta.size(),19);
+            impacts = iGenerator.generateCombinations();
+
             setKappaValues(delta);
             setKappaWorlds(delta);
 
-            // fallback
-            int fallback = 1;
-            // since there are c-representations which aren't correct, this step has to be made
-            while(!testCorrectness()){
-                setKappaValues(delta);
-                setKappaWorlds(delta);
-                testCorrectness();
+            int index = 0;
 
-                fallback++;
-                if(fallback > 100000 && !testCorrectness()){
-                    setKappaValues(delta,true);
+            /* check if generated function is an cRep */
+            boolean test = testCorrectness();
+
+            if(!test){
+                /* remove impact-values, which lead to no cRep */
+                impacts.remove(0);
+
+                /* search as long there are possible impact-values */
+                while(!test && impacts.size() > 0) {
+                    setKappaValues(delta);
                     setKappaWorlds(delta);
-                    testCorrectness();
-                    if(testCorrectness()){
-                        System.out.println("Fallback method used:");
-                    }
+                    System.out.println(index);
+                    index++;
+                    test = testCorrectness();
+                    impacts.remove(0);
                 }
-
-
             }
-
-            printResults(delta);
+            if(impacts.size()>0){
+                printResults(delta);
+                System.out.println("+++++++++++++++++++++++++++++++++++++++++++++");
+                System.out.println(Integer.valueOf(1 + String.format("%0" + delta.size() + "d", 0)));
+            }
+            else{
+                System.out.println("+++++++++++++++++++++++++++++++++++++++++++++");
+                System.out.println("No c-representation was found!");
+            }
         }
-    }
-
-    /*
-     *  A simple Method for preloading some knowledgebases
-     */
-    private static ArrayList<ClBeliefSet> setKnowledgeBase(){
-        ArrayList<ClBeliefSet> bases = new ArrayList<>();
-        ClBeliefSet kb1 = new ClBeliefSet();
-
-        /* Define signature */
-        Proposition b = new Proposition("b"); //bird
-        Proposition f = new Proposition("f"); //flying
-        Proposition p = new Proposition("p"); //penguin
-        Proposition w = new Proposition("w"); //winged animal
-        Proposition k = new Proposition("k"); //kiwi
-
-        Proposition a = new Proposition("a"); //awesome kiwi
-        Proposition c = new Proposition("c"); //crocodile
-        Proposition d = new Proposition("d"); //descend from dinosaurs
-
-        Proposition e = new Proposition("e"); //lays eggs
-        Proposition h = new Proposition("h"); //huge animal
-        Proposition s = new Proposition("s"); //super-penguin
-
-        Proposition v = new Proposition("v");
-        Proposition z = new Proposition("z");
-
-        /* Add Conditionals */
-        kb1.add(new Conditional(b,f));
-        kb1.add(new Conditional(p,b));
-        kb1.add(new Conditional(p,new Negation(f)));
-        kb1.add(new Conditional(b,w));
-
-        /* super-penguins can fly */
-        ClBeliefSet kb2 = new ClBeliefSet(kb1);
-        kb2.add(new Conditional(s,p));
-        kb2.add(new Conditional(s,f));
-
-        /* knowledge about animals which lay eggs and new knowledge about crocodiles*/
-        ClBeliefSet kb3 = new ClBeliefSet(kb1);
-        kb3.add(new Conditional(e,p));
-        kb3.add(new Conditional(e,d));
-        kb3.add(new Conditional(h,c));
-        kb3.add(new Conditional(c,d));
-
-        //kb3.add(new Conditional(b,p)); // makes the knowledgebases inconsistent, for check purposes
-
-        ClBeliefSet kb4 = new ClBeliefSet();
-        kb4.add(new Conditional(e,v));
-        kb4.add(new Conditional(v,new Negation(s)));
-        kb4.add(new Conditional(e,s));
-        kb4.add(new Conditional(v,f));
-        kb4.add(new Conditional(e,new Negation(z)));
-
-        ClBeliefSet kb5 = new ClBeliefSet();
-        kb5.add(new Conditional(new Tautology(),b));
-        kb5.add(new Conditional(b,f));
-        kb5.add(new Conditional(b,w));
-        kb5.add(new Conditional(p,b));
-        kb5.add(new Conditional(p,new Negation(f)));
-        kb5.add(new Conditional(s,a));
-        kb5.add(new Conditional(b,e));
-        kb5.add(new Conditional(a,e));
-
-        bases.add(kb1); // has two partitions and four conditionals
-        bases.add(kb2); // has three partitions and six conditionals
-        bases.add(kb3); // has three partitions and ten conditionals
-        bases.add(kb4); // has two partitions and five conditionals
-        bases.add(kb5);
-        return bases;
     }
 
     private static void setKappaValues(ClBeliefSet kb) {
         condStruct.clear();
         kappaWorlds.clear();
 
-        int signature_length = kb.getSignature().size();
         int kappaMinus;
-        int kappaPlus = 1;
+        int kappaPlus;
+        int index = 0;
 
-        for(ClBeliefSet bs : partitions){
-            int i = partitions.indexOf(bs);
-            boolean first_conditional = true;
-            for(Conditional cond: bs){
-                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+2);
+        for(Conditional conditional : kb){
+            kappaMinus = impacts.get(0)[index];
 
-                if(first_conditional){
-                    kappaMinus = (int) Math.pow(2,i+1);
-                    first_conditional = false;
-                }
-                condStruct.add(new ConditionalKappa(cond,kappaMinus, kappaPlus));
+            if(cRepType == 0){
+                kappaPlus = 0;
+            } else if(cRepType == 1){
+                kappaPlus = 1;
+            } else {
+                kappaPlus = -1 * kappaMinus;
             }
-        }
-    }
 
-    /*
-     *  If the first method isnt fast enough, use this fallback method to compute
-     *  the kappa values
-     */
-    private static void setKappaValues(ClBeliefSet kb, boolean fallback) {
-        condStruct.clear();
-        kappaWorlds.clear();
-
-        int signature_length = kb.getSignature().size();
-        int kappaMinus;
-        int kappaPlus = 1;
-
-        boolean first_conditional = true;
-        for(ClBeliefSet bs : partitions){
-            int i = partitions.indexOf(bs);
-
-            for(Conditional cond: bs){
-                kappaMinus = getRandomNumberInRange(kappaPlus+1,signature_length+2);
-
-                if(first_conditional){
-                    kappaMinus = (int) Math.pow(2,i+1);
-                    first_conditional = false;
-                }
-                condStruct.add(new ConditionalKappa(cond,kappaMinus, kappaPlus));
-            }
+            index++;
+            condStruct.add(new ConditionalKappa(conditional,kappaMinus, kappaPlus));
         }
     }
 
     private static void setKappaWorlds(ClBeliefSet kb) {
         int kappa;
+        ArrayList<Conditional> kbList = new ArrayList<>(kb);
+
         for(NicePossibleWorld w: worlds) {
             // initial value of kappa_zero is 0, can be changed if necessary
             // but shouldn't happen since the following methods adjust it
-            kappa = kappa_0;
-            for(Conditional c: kb){
+            kappa = 0;
+            String kappa_values= "";
+            for(Conditional c: kbList){
+
                 PlFormula con = c.getConclusion();
                 Conjunction pre = Semantics.CollectionToConjunction(c.getPremise());
                 Negation negCon = new Negation(con);
@@ -197,16 +135,21 @@ public class PositiveCRepresentation {
 
                 if(w.satisfies((Collection<PlFormula>) pre.combineWithAnd(con))){
                     kappa = kappa + condStruct.get(index).getKappaPos();
+                    kappa_values = kappa_values.concat("k_" + (kbList.indexOf(c)+1) + "^+ (" + c + "), ");
+
                 }
                 if(w.satisfies((Collection<PlFormula>) pre.combineWithAnd(negCon))){
                     kappa = kappa + condStruct.get(index).getKappaNeg();
+                    kappa_values = kappa_values.concat("k_" + (kbList.indexOf(c)+1) + "^- (" + c + "), ");
                 }
             }
             kappaWorlds.put(w,kappa);
+            kappaWorlds2.put(w,kappa_values);
+
         }
     }
 
-    /* check */
+    /* check the inequationssystem*/
     private static boolean testCorrectness(){
         boolean result = true;
         ArrayList<Integer> negativeNumbers = new ArrayList<>();
@@ -221,9 +164,16 @@ public class PositiveCRepresentation {
             kappaWorlds.replaceAll((w, v) -> v + kappa_0);
         }
 
+        // if there is only positive numbers, but no zero
+        if(!kappaWorlds.containsValue(0)){
+            kappa_0 = Collections.min(kappaWorlds.values());
+            kappaWorlds.replaceAll((w, v) -> v - kappa_0);
+        }
+
+
         if(kappaWorlds.containsValue(0)){
             Iterator<ConditionalKappa> it = condStruct.iterator();
-            int kappaW;
+
             int kappaPosSum;
             int kappaNegSum;
 
@@ -235,25 +185,40 @@ public class PositiveCRepresentation {
                 ArrayList<NicePossibleWorld> fWorlds = Semantics.getFalsifyingWorlds(k, worlds);
 
                 ArrayList<Integer> possibleMinimaW = new ArrayList<>();
+                ArrayList<List<Integer>> possibleMinimaW_details = new ArrayList<>();
                 ArrayList<Integer> possibleMinimaF = new ArrayList<>();
+                ArrayList<List<Integer>> possibleMinimaF_details = new ArrayList<>();
 
                 for (NicePossibleWorld w : vWorlds) {
-                    kappaW = kappaWorlds.get(w);
                     kappaPosSum = getKappaSum(k, w, true);
                     kappaNegSum = getKappaSum(k, w, false);
-                    possibleMinimaW.add(kappaW + kappaPosSum + kappaNegSum);
+                    possibleMinimaW.add(kappaPosSum + kappaNegSum);
+                    List<Integer> arr = Arrays.asList(kappaPosSum, kappaNegSum);
+                    possibleMinimaW_details.add(arr);
                 }
                 for (NicePossibleWorld w : fWorlds) {
-                    kappaW = kappaWorlds.get(w);
                     kappaPosSum = getKappaSum(k, w, true);
                     kappaNegSum = getKappaSum(k, w, false);
-                    possibleMinimaF.add(kappaW + kappaPosSum + kappaNegSum);
+                    possibleMinimaF.add(kappaPosSum + kappaNegSum);
+                    List<Integer> arr = Arrays.asList(kappaPosSum, kappaNegSum);
+                    possibleMinimaF_details.add(arr);
                 }
+
                 int rightSum = Collections.min(possibleMinimaW) - Collections.min(possibleMinimaF);
                 if (cK.getKappaDiff() <= rightSum) {
                     result = false;
                     kappa_0 = 0;
                 }
+                /*
+                System.out.println(k + " :" + vWorlds + ", " + fWorlds);
+
+                System.out.println(k + " :" + cK.getKappaDiff() + " > " +
+                        possibleMinimaW_details  +" - " +
+                        possibleMinimaF_details +" = " +
+                        Collections.min(possibleMinimaW) +" - " +
+                        Collections.min(possibleMinimaF)
+                );
+                */
             }
         }
         return result;
@@ -293,30 +258,52 @@ public class PositiveCRepresentation {
 
     public static void printResults(ClBeliefSet delta) {
         // Printing all details
-        System.out.println("Knowledgebase:\n" + "Delta = " + delta + "\n");
+
+        System.out.println("\n\n--------------------------");
+        System.out.println("Knowledgebase:");
+        System.out.println("--------------------------");
+        System.out.println("Delta = " + delta + "\n");
+        System.out.println("--------------------------");
 
         System.out.println("Partitioning:");
+        System.out.println("--------------------------");
         int l = 0;
         for(ClBeliefSet bs : partitions){
             System.out.println("Delta_" + l + " = " + bs);
             l++;
         }
-        System.out.println("\nImpact-factors:");
+        System.out.println(" ");
+        System.out.println("--------------------------");
+        System.out.println("Impact-factors:");
+        System.out.println("--------------------------");
         for(ConditionalKappa cK : condStruct){
             System.out.println(cK);
         }
         if(kappa_0 != 0) {
             System.out.println("\nKappa_0 had to be adjusted to: " + kappa_0);
         }
-        System.out.println("\nSuitable c-representation of Delta:");
-        kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));
+        System.out.println(" ");
+        System.out.println("--------------------------");
+        System.out.println("c-representation of Delta:");
+        System.out.println("--------------------------");
+        //kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));
+        kappaWorlds2.forEach((k, v)-> System.out.println(k + " = " + kappaWorlds.get(k) + " : " + v));
+
+
     }
 
     public static void inconsistentErrorMessage() {
         System.out.println("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
         System.out.println("* \t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t  *");
-        System.out.println("* \t The given knowledgebase is inconsistent. Please check your input. \t  *");
+        System.out.println("* \t The given knowledge base is inconsistent. Please check your input. \t  *");
         System.out.println("* \t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t  *");
         System.out.println("* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *");
+    }
+
+
+
+    private void localToGlobalWorlds(ArrayList<ClBeliefSet> cliques){
+        LinkedHashMap<NicePossibleWorld, ArrayList<Integer>> result;
+        ArrayList<Integer> tmp_values = new ArrayList<>();
     }
 }

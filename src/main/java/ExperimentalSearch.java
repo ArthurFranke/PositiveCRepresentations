@@ -8,9 +8,6 @@ import org.tweetyproject.logics.pl.syntax.Negation;
 import org.tweetyproject.logics.pl.syntax.PlFormula;
 import org.tweetyproject.logics.pl.syntax.Proposition;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
 import java.util.*;
 
 public class ExperimentalSearch {
@@ -39,7 +36,7 @@ public class ExperimentalSearch {
         worlds = NicePossibleWorld.getAllPossibleWorlds(delta.getSignature().toCollection());
 
         if(partitions.isEmpty()){
-            PositiveCRepresentation.inconsistentErrorMessage();
+            PosCRep.inconsistentErrorMessage();
         }
         else{
             for(int i = 0; i<1000000; i++){
@@ -66,8 +63,8 @@ public class ExperimentalSearch {
         int kappaPlus;
 
         for(Conditional c : delta) {
-            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-9,9);
-            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-9,9);
+            kappaMinus = PosCRep.getRandomNumberInRange(-9,9);
+            kappaPlus  = PosCRep.getRandomNumberInRange(-9,9);
 
             condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
         }
@@ -79,12 +76,12 @@ public class ExperimentalSearch {
         int kappaPlus;
 
         for(Conditional c : delta) {
-            kappaMinus = PositiveCRepresentation.getRandomNumberInRange(-10,10);
-            kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(-10,10);
+            kappaMinus = PosCRep.getRandomNumberInRange(-10,10);
+            kappaPlus  = PosCRep.getRandomNumberInRange(-10,10);
 
             while((kappaMinus - kappaPlus) != 2){
-                kappaMinus = PositiveCRepresentation.getRandomNumberInRange(1,10);
-                kappaPlus  = PositiveCRepresentation.getRandomNumberInRange(1,10);
+                kappaMinus = PosCRep.getRandomNumberInRange(1,10);
+                kappaPlus  = PosCRep.getRandomNumberInRange(1,10);
             }
             condStruct.add(new ConditionalKappa(c, kappaMinus, kappaPlus));
         }
@@ -102,7 +99,7 @@ public class ExperimentalSearch {
             int i = partitions.indexOf(bs);
 
             for(Conditional cond: bs){
-                kappaMinus = PositiveCRepresentation.getRandomNumberInRange(kappaPlus+1,10);
+                kappaMinus = PosCRep.getRandomNumberInRange(kappaPlus+1,10);
 
                 if(first_conditional){
                     kappaMinus = (int) Math.pow(2, i+1);

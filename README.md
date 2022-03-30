@@ -6,11 +6,9 @@ application they were explicitly used. Hence the name of this project.
 This generator uses the Tweety library from [Tweety-Project](http://tweetyproject.org/).
 
 # Construction of c-representation
-To generate the c-representations execute the main function in `PositiveCRepresentations`. 
+To generate the c-representations execute the main function in `PosCRep`. 
 To add your own knowledgebase, please change `setKnowledgeBase` function accordingly.
 
 # Search and experiments with impact-factors
 If you want to change the impact-factors, please use the `ExperimentalSearch`, 
-where you can find three possible methods. While the random one is preloaded in the main function, you
-can change it to your need or pick one of the other two.
-
+where you can find three possible methods.

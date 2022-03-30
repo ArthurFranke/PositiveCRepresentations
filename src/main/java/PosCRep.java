@@ -52,7 +52,7 @@ public class PosCRep {
         }
         else{
             /* get all negative impact-values */
-            ImpactGenerator iGenerator = new ImpactGenerator(delta.size(),19);
+            ImpactGenerator iGenerator = new ImpactGenerator(delta.size(),9);
             impacts = iGenerator.generateCombinations();
 
             setKappaValues(delta);
@@ -78,9 +78,8 @@ public class PosCRep {
                 }
             }
             if(impacts.size()>0){
-                printResults(delta);
+                printResults(delta,cs);
                 System.out.println("+++++++++++++++++++++++++++++++++++++++++++++");
-                System.out.println(Integer.valueOf(1 + String.format("%0" + delta.size() + "d", 0)));
             }
             else{
                 System.out.println("+++++++++++++++++++++++++++++++++++++++++++++");
@@ -256,7 +255,7 @@ public class PosCRep {
         return value.isPresent() ? value.getAsInt() : 0;
     }
 
-    public static void printResults(ClBeliefSet delta) {
+    public static void printResults(ClBeliefSet delta, ConditionalStructure cs) {
         // Printing all details
 
         System.out.println("\n\n--------------------------");
@@ -286,10 +285,12 @@ public class PosCRep {
         System.out.println("--------------------------");
         System.out.println("c-representation of Delta:");
         System.out.println("--------------------------");
-        //kappaWorlds.forEach((k, v)-> System.out.println(k + ": " + v));
-        kappaWorlds2.forEach((k, v)-> System.out.println(k + " = " + kappaWorlds.get(k) + " : " + v));
 
+        Set<NicePossibleWorld> omega = cs.getPossibleWorlds();
 
+        for (NicePossibleWorld o : omega) {
+            System.out.println(o + " = " + kappaWorlds.get(o) + " : " + kappaWorlds2.get(o));
+        }
     }
 
     public static void inconsistentErrorMessage() {
